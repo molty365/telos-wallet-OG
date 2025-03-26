@@ -530,6 +530,7 @@ export default {
         '0x7825e833D495F3d1c28872415a4aee339D26AC88',
         is_sent_to: '{quantity} is sent to {address}',
         failed_to_send: 'Failed to send {quantity} to {address}',
+        execute_cleos_command: 'Execute your transaction in CLEOS to proceed',
         to_network: 'To Network',
         memo: 'Memo',
         minimun_to_transfer: 'Minimum of $100 for mainnet TLOS to Ethereum Transfers',
