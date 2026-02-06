@@ -22,8 +22,8 @@ $saveBtn: #2C2B2F;
 /************************
  *** Dark/Light Mode ***
  ************************/
-$a-hover-light: color-mix(in srgb, var(--q-primary), black 50%);
-$a-hover-dark: color-mix(in srgb, var(--q-primary), white 30%);
+$a-hover-light: #00A8B4;  // Accessible cyan for light mode
+$a-hover-dark: #00F2FE;  // Bright cyan for dark mode
 $grey: #909090;
 $tab-active-light: color-mix(in srgb, var(--q-primary), white 20%);
 $tab-active-dark: var(--q-primary);
