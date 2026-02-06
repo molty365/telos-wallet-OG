@@ -30,10 +30,11 @@ export default defineComponent({
         },
         prettyPrintApy() {
             const apy = chainStore.currentEvmChain?.apy;
-            if (apy) {
+            if (apy && apy !== '') {
                 return apy + '%';
             } else {
-                return '';
+                // Fallback APY if API doesn't return a value
+                return '~5%';
             }
         },
         showMenuIcon() {
