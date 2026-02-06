@@ -6,7 +6,7 @@ import { TokenClass, TokenSourceInfo } from 'src/antelope/types';
 import { useUserStore } from 'src/antelope';
 import { getFiatPriceFromIndexer } from 'src/api/price';
 
-const LOGO = 'https://raw.githubusercontent.com/molty365/token-list/main/logos/telos.png';
+const LOGO = 'https://raw.githubusercontent.com/molty365/token-list/main/logos/telos.svg';
 const CHAIN_ID = '40';
 export const NETWORK = 'telos-evm';
 const DISPLAY = 'Telos EVM';
