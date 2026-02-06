@@ -2,19 +2,11 @@
 // Main entry point
 
 // Brand (load first)
-@import 'brand/brand-guidelines';
+@import 'brand/telos-brand';
 @import 'brand/brand-updates';
 
-// Fonts
-@import 'fonts/silka';
-
 // Global styles
-@import 'global/animations';
-@import 'global/global';
-@import 'global/typography';
-@import 'global/breakpoints';
-@import 'global/utils';
-@import 'global/z-index';
+@import 'global/global-index';
 
 // Components
 @import 'components/inputs';
