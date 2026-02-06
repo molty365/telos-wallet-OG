@@ -255,7 +255,7 @@ a img {
   .leftNavBar {
     transform: translateX(0);
     border-radius: unset;
-    background: linear-gradient(to bottom, #1B1B1D, #00000000 80%);
+    background: #1B1B1D;  // Solid Telos Off-Black
     top: 0;
     height: 100vh;
     width: 250px;
