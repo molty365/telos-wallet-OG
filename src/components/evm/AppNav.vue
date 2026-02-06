@@ -267,7 +267,10 @@ export default defineComponent({
 
         <ul class="c-app-nav__menu-items">
             <li
-                class="c-app-nav__menu-item"
+                :class="{
+                    'c-app-nav__menu-item': true,
+                    'c-app-nav__menu-item--active': $route.name === 'evm-wallet',
+                }"
                 role="menuitem"
                 :tabindex="menuItemTabIndex"
                 @click="goTo('evm-wallet')"
@@ -287,7 +290,10 @@ export default defineComponent({
             </li>
 
             <li
-                class="c-app-nav__menu-item"
+                :class="{
+                    'c-app-nav__menu-item': true,
+                    'c-app-nav__menu-item--active': $route.name === 'evm-staking',
+                }"
                 role="menuitem"
                 :tabindex="menuItemTabIndex"
                 @click="goTo('evm-staking')"
@@ -317,7 +323,10 @@ export default defineComponent({
             </li>
 
             <li
-                class="c-app-nav__menu-item"
+                :class="{
+                    'c-app-nav__menu-item': true,
+                    'c-app-nav__menu-item--active': $route.name === 'evm-nft-inventory',
+                }"
                 role="menuitem"
                 :tabindex="menuItemTabIndex"
                 @click="goTo('evm-nft-inventory')"
@@ -337,7 +346,10 @@ export default defineComponent({
             </li>
 
             <li
-                class="c-app-nav__menu-item"
+                :class="{
+                    'c-app-nav__menu-item': true,
+                    'c-app-nav__menu-item--active': $route.name === 'evm-wrap',
+                }"
                 role="menuitem"
                 :tabindex="menuItemTabIndex"
                 @click="goTo('evm-wrap')"
@@ -357,7 +369,10 @@ export default defineComponent({
             </li>
 
             <li
-                class="c-app-nav__menu-item"
+                :class="{
+                    'c-app-nav__menu-item': true,
+                    'c-app-nav__menu-item--active': $route.name === 'evm-allowances',
+                }"
                 role="menuitem"
                 :tabindex="menuItemTabIndex"
                 @click="goTo('evm-allowances')"
@@ -551,6 +566,11 @@ export default defineComponent({
         margin-left: 48px;
         margin-right: 48px;
         cursor: pointer;
+        
+        // Make logo white on gradient sidebar (light mode)
+        body.body--light & {
+            filter: brightness(0) invert(1);
+        }
     }
 
     &__menu-items {
@@ -563,6 +583,11 @@ export default defineComponent({
 
         cursor: pointer;
         display: flex;
+        
+        // Active state - white text for visibility on gradient sidebar
+        &--active {
+            color: var(--sidebar-active-color);
+        }
         align-items: center;
         gap: 16px;
         margin-bottom: 32px;
@@ -601,9 +626,9 @@ export default defineComponent({
     }
 
     &__icon {
-        // svg color overrides
+        // svg color overrides - use sidebar-active-color for visibility on gradient bg
         &--current-route:not(#{$this}__icon--acorn) path {
-            fill: var(--link-color);
+            fill: var(--sidebar-active-color);
         }
 
         &--current-route#{$this}__icon--acorn {
