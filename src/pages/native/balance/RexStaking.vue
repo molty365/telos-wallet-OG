@@ -12,7 +12,7 @@ export default {
             tokenAmount: 0,
             tokenRexBalance: 0,
             rpc: null,
-            apyString: 'Earn up to 13% APY',
+            apyString: 'Earn up to 4% APY',
         };
     },
     computed: {
