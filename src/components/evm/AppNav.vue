@@ -566,7 +566,7 @@ export default defineComponent({
         margin-left: 48px;
         margin-right: 48px;
         cursor: pointer;
-        
+
         // Make logo white on gradient sidebar (light mode)
         body.body--light & {
             filter: brightness(0) invert(1);
@@ -583,7 +583,7 @@ export default defineComponent({
 
         cursor: pointer;
         display: flex;
-        
+
         // Active state - white text for visibility on gradient sidebar
         &--active {
             color: var(--sidebar-active-color);
