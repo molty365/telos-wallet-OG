@@ -216,12 +216,21 @@ export default {
   position: fixed;
   z-index: -1;
   video {
-    display: none;  // Hide the wavy video background
+    object-fit: cover;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+    transform: rotate(180deg);
+    top: 35vh;
+    left: 0;
+    opacity: 0.4;  // Dim the wave visual
+    filter: grayscale(30%) hue-rotate(-20deg);  // Shift colors toward brand
   }
 }
 
 .videoOverlay {
-  background: #1B1B1D;  // Solid dark grey instead of gradient
+  // Dark overlay with subtle brand gradient hint
+  background: linear-gradient(135deg, rgba(27, 27, 29, 0.85) 0%, rgba(27, 27, 29, 0.7) 100%);
   width: 100vw;
   height: 100vh;
   position: fixed;
@@ -230,7 +239,8 @@ export default {
 }
 
 .shadedOverlay {
-  background: transparent;  // Remove the purple gradient overlay
+  // Subtle brand gradient accent at bottom
+  background: linear-gradient(to top, rgba(0, 242, 254, 0.05), transparent 40%);
 }
 
 .profileImg {
