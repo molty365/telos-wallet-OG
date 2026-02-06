@@ -210,6 +210,27 @@ export default defineComponent({
 <div class="c-login-buttons">
 
     <template v-if="showEVMButtons">
+        <!-- Rabby Authenticator button -->
+        <div
+            v-if="showRabbyButton"
+            class="c-login-buttons__option"
+            @click="supportsRabby ? setRabbyEVM() : redirectToRabbyDownload()"
+        >
+            <template v-if="isLoading('Rabby.login')">
+                <div class="c-login-buttons__loading"><QSpinnerFacebook /></div>
+            </template>
+            <template v-else>
+                <img
+                    :src="require('src/assets/evm/rabby.png')"
+                    class="c-login-buttons__icon c-login-buttons__icon--rabby"
+                    height="24"
+                    width="24"
+                    aria-hidden="true"
+                >
+                {{ supportsRabby ? 'Rabby' : 'Install Rabby' }}
+            </template>
+        </div>
+
         <!-- Brave Authenticator button -->
         <div
             v-if="showBraveButton"
@@ -291,27 +312,6 @@ export default defineComponent({
                     aria-hidden="true"
                 />
                 {{ supportsSafePal ? $t('home.safepal') : $t('home.install_safepal') }}
-            </template>
-        </div>
-
-        <!-- Rabby Authenticator button -->
-        <div
-            v-if="showRabbyButton"
-            class="c-login-buttons__option"
-            @click="supportsRabby ? setRabbyEVM() : redirectToRabbyDownload()"
-        >
-            <template v-if="isLoading('Rabby.login')">
-                <div class="c-login-buttons__loading"><QSpinnerFacebook /></div>
-            </template>
-            <template v-else>
-                <InlineSvg
-                    :src="require('src/assets/evm/rabby.svg')"
-                    class="c-login-buttons__icon c-login-buttons__icon--rabby"
-                    height="24"
-                    width="24"
-                    aria-hidden="true"
-                />
-                {{ supportsRabby ? 'Rabby' : 'Install Rabby' }}
             </template>
         </div>
 
