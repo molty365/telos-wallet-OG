@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "vue.volar",
+    "streetsidesoftware.code-spell-checker",
+    "abdelaziz18003.quasar-snippets",
+    "syler.sass-indented",
+    "mrmlnc.vscode-scss",
+  ],
+  "unwantedRecommendations": [
+    "hookyqr.beautify",
+    "dbaeumer.jshint",
+    "ms-vscode.vscode-typescript-tslint-plugin"
+  ]
+}
