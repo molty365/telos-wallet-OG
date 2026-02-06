@@ -34,7 +34,7 @@ export default defineComponent({
                 return apy + '%';
             } else {
                 // Fallback APY if API doesn't return a value
-                return '~5%';
+                return '4%';
             }
         },
         showMenuIcon() {
