@@ -57,8 +57,8 @@ export default defineComponent({
             return '0';
         },
         isProduction() {
-            // only enable demo route for staging & development
-            return window.location.origin.includes('telos.net');
+            // Hide demos in production - only show on localhost
+            return !window.location.origin.includes('localhost');
         },
         accountActionText() {
             if (this.loggedAccount) {
