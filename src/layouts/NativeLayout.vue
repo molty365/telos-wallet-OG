@@ -210,28 +210,18 @@ export default {
 }
 
 .videoWrapper {
-  background: black;
+  background: #1B1B1D;  // Telos Off-Black
   width: 100vw;
   height: 100vh;
   position: fixed;
   z-index: -1;
   video {
-    object-fit: cover;
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
-    transform: rotate(180deg);
-    top: 35vh;
-    left: 0;
+    display: none;  // Hide the wavy video background
   }
 }
 
 .videoOverlay {
-  // background: url("~assets/MainBG.png");
-  background: linear-gradient(0.4turn, #0a1d5f52, #814cdc52);
-  background-repeat: no-repeat;
-  background-size: cover;
-  object-fit: cover;
+  background: #1B1B1D;  // Solid dark grey instead of gradient
   width: 100vw;
   height: 100vh;
   position: fixed;
@@ -240,7 +230,7 @@ export default {
 }
 
 .shadedOverlay {
-  background: linear-gradient(0.4turn, #0a1d5f52, #814cdc52);
+  background: transparent;  // Remove the purple gradient overlay
 }
 
 .profileImg {
@@ -258,7 +248,7 @@ export default {
 }
 
 .warningSign {
-  background: #8946df;
+  background: linear-gradient(135deg, #00F2FE 0%, #4FACFE 50%, #C471F5 100%);  // Telos gradient
 }
 </style>
 
