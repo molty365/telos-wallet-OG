@@ -658,7 +658,7 @@ export default abstract class EVMChainSettings implements ChainSettings {
             return this.tokenListPromise;
         }
 
-        const url =  'https://raw.githubusercontent.com/telosnetwork/token-list/main/telosevm.tokenlist.json';
+        const url =  'https://raw.githubusercontent.com/molty365/token-list/main/telosevm.tokenlist.json';
         this.tokenListPromise = axios.get(url)
             .then(results => results.data.tokens as unknown as {chainId:number, logoURI: string}[])
             .then(tokens => tokens.filter(({ chainId }) => chainId === +this.getChainId()))

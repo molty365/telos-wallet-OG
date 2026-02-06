@@ -199,7 +199,7 @@ export default abstract class NativeChainSettings implements ChainSettings {
         }
 
         const name = this.getNetwork();
-        const url = `https://raw.githubusercontent.com/telosnetwork/token-list/main/tokens.${name}.json`;
+        const url = `https://raw.githubusercontent.com/molty365/token-list/main/tokens.${name}.json`;
         this.tokenListPromise = fetch(url)
             .then(response => response.text())
             .then((fileContent: string) => JSON.parse(fileContent) as TokenSourceInfo[])
