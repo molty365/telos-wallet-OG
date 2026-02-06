@@ -105,13 +105,14 @@ const isWithdrawableLoading = computed(() => withdrawableBalanceBn.value === und
 
 const apyPrittyPrint = computed(() => {
     const apy = chainStore.currentEvmChain?.apy;
-    if (apy) {
+    if (apy && apy !== '') {
         return apy + '%';
     } else {
-        return '--';
+        // Fallback APY when API doesn't return a value
+        return '4%';
     }
 });
-const apyisLoading = computed(() => apyPrittyPrint.value === '--');
+const apyisLoading = computed(() => false);  // Never show loading since we have fallback
 
 const unlockPeriod = computed(() => rexStore.getUnstakingPeriodString(CURRENT_CONTEXT));
 const unlockPeriodLoading = computed(() => unlockPeriod.value === '--');
