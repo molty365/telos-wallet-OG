@@ -381,7 +381,7 @@ export default abstract class EVMChainSettings implements ChainSettings {
 
         // the indexer NFT data which will be used to construct NFTs
         const shapedIndexerNftData: GenericIndexerNft[] = response.results.map(nftResponse => ({
-            metadata: JSON.parse(nftResponse.metadata),
+            metadata: nftResponse.metadata ? (typeof nftResponse.metadata === 'string' ? JSON.parse(nftResponse.metadata) : nftResponse.metadata) : {},
             tokenId: nftResponse.tokenId,
             contract: nftResponse.contract,
             updated: nftResponse.updated,
@@ -413,6 +413,7 @@ export default abstract class EVMChainSettings implements ChainSettings {
         }
         // Use Blockscout adapter for account NFTs
         const response = await this.blockscoutAdapter.getAccountNfts(account, params) as unknown as IndexerAccountNftsResponse;
+        console.log('[NFT DEBUG] getAccountNfts response:', JSON.stringify({ resultCount: response.results?.length, contractKeys: Object.keys(response.contracts || {}), firstResult: response.results?.[0] }));
 
         // If the contract does not have the list of supported interfaces, we provide one
         Object.values(response.contracts).forEach((contract) => {
@@ -423,7 +424,7 @@ export default abstract class EVMChainSettings implements ChainSettings {
 
         // the indexer NFT data which will be used to construct NFTs
         const shapedIndexerNftData: GenericIndexerNft[] = response.results.map(nftResponse => ({
-            metadata: JSON.parse(nftResponse.metadata),
+            metadata: nftResponse.metadata ? (typeof nftResponse.metadata === 'string' ? JSON.parse(nftResponse.metadata) : nftResponse.metadata) : {},
             tokenId: nftResponse.tokenId,
             contract: nftResponse.contract,
             updated: nftResponse.updated,
@@ -434,9 +435,14 @@ export default abstract class EVMChainSettings implements ChainSettings {
         }));
 
         this.processNftContractsCalldata(response.contracts);
+        console.log('[NFT DEBUG] shapedIndexerNftData:', JSON.stringify(shapedIndexerNftData));
+        console.log('[NFT DEBUG] contracts after calldata processing:', JSON.stringify(response.contracts));
         const shapedNftData = this.shapeNftRawData(shapedIndexerNftData, response.contracts);
+        console.log('[NFT DEBUG] shapedNftData count:', shapedNftData.length);
 
-        return this.processNftRawData(shapedNftData);
+        const result = await this.processNftRawData(shapedNftData);
+        console.log('[NFT DEBUG] processNftRawData result count:', result.length);
+        return result;
     }
 
     // ensure NFT contract calldata is an object

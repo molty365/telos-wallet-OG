@@ -51,6 +51,27 @@ export interface BlockscoutSmartContract {
     is_verified: boolean;
 }
 
+export interface BlockscoutTransaction {
+    hash: string;
+    block_number: number;
+    from: { hash: string } | null;
+    to: { hash: string } | null;
+    value: string;
+    gas_limit: string;
+    gas_price: string;
+    gas_used: string;
+    nonce: number;
+    position: number;
+    status: string;
+    timestamp: string;
+    raw_input: string;
+    decoded_input: { method_call: string } | null;
+    created_contract: { hash: string } | null;
+    fee: { value: string } | null;
+    result: string;
+    transaction_types: string[];
+}
+
 export interface BlockscoutNFTInstance {
     id: string;
     metadata: Record<string, unknown> | null;
@@ -146,8 +167,9 @@ export class BlockscoutAdapter {
      * Token balances - /v1/account/{addr}/balances → /api/v2/addresses/{addr}/tokens
      */
     async getBalances(account: string, params?: { limit?: number; offset?: number }): Promise<LegacyBalancesResponse> {
+        // Blockscout v2 doesn't accept limit/offset on this endpoint
         const response = await this.indexer.get(`/api/v2/addresses/${account}/tokens`, {
-            params: { type: 'ERC-20', ...params },
+            params: { type: 'ERC-20' },
         });
 
         const items = response.data.items as BlockscoutAddressToken[];
@@ -182,9 +204,8 @@ export class BlockscoutAdapter {
         contractAddress: string,
         params?: { limit?: number; account?: string; token_id?: string },
     ): Promise<LegacyTokenHoldersResponse> {
-        const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/holders`, {
-            params,
-        });
+        // Only pass supported params to Blockscout v2
+        const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/holders`);
 
         const items = response.data.items as BlockscoutTokenHolder[];
 
@@ -237,8 +258,9 @@ export class BlockscoutAdapter {
     async getAccountNfts(account: string, params?: { type?: string; limit?: number; offset?: number }) {
         const nftType = params?.type === 'ERC721' ? 'ERC-721' : params?.type === 'ERC1155' ? 'ERC-1155' : undefined;
 
+        // Blockscout v2 only accepts 'type' param, not limit/offset
         const response = await this.indexer.get(`/api/v2/addresses/${account}/nft`, {
-            params: { type: nftType, ...params },
+            params: { type: nftType },
         });
 
         return this.transformNftResponse(response.data.items || []);
@@ -248,9 +270,8 @@ export class BlockscoutAdapter {
      * Collection NFTs - /v1/contract/{addr}/nfts → /api/v2/tokens/{addr}/instances
      */
     async getCollectionNfts(contractAddress: string, params?: { limit?: number; offset?: number }) {
-        const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/instances`, {
-            params,
-        });
+        // Blockscout v2 doesn't accept limit/offset on this endpoint
+        const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/instances`);
 
         return this.transformNftResponse(response.data.items || [], contractAddress);
     }
@@ -268,6 +289,7 @@ export class BlockscoutAdapter {
             owner: item.owner?.hash || '',
             updated: Date.now(),
             supply: '1', // Default for ERC721, ERC1155 would need separate handling
+            tokenIdSupply: '1', // Alias for getNftsForAccount path
         }));
 
         // Build contracts map
@@ -279,6 +301,7 @@ export class BlockscoutAdapter {
                     name: item.token.name,
                     abi: null,
                     verified: false,
+                    calldata: JSON.stringify({ name: item.token.name, symbol: item.token.symbol }),
                     supportedInterfaces: [item.token.type?.toLowerCase().replace('-', '') || 'erc721'],
                 };
             }
@@ -291,15 +314,40 @@ export class BlockscoutAdapter {
      * Transactions - /v1/address/{addr}/transactions → /api/v2/addresses/{addr}/transactions
      */
     async getTransactions(address: string, params?: { limit?: number; offset?: number }) {
-        const response = await this.indexer.get(`/api/v2/addresses/${address}/transactions`, {
-            params,
-        });
+        // Blockscout v2 doesn't accept 'limit' — remove unsupported params
+        const response = await this.indexer.get(`/api/v2/addresses/${address}/transactions`);
 
-        // Transform to legacy format - this is a simplified version
+        const items = response.data.items || [];
+
+        // Transform Blockscout format to legacy EvmTransaction format
+        const results = items.map((tx: BlockscoutTransaction) => ({
+            blockNumber: tx.block_number || 0,
+            contractAddress: tx.created_contract?.hash || '',
+            cumulativeGasUsed: '0x0',
+            from: tx.from?.hash || '',
+            gasLimit: '0x' + (parseInt(tx.gas_limit || '0')).toString(16),
+            gasPrice: '0x' + (parseInt(tx.gas_price || '0')).toString(16),
+            gasused: '0x' + (parseInt(tx.gas_used || '0')).toString(16),
+            hash: tx.hash || '',
+            index: tx.position || 0,
+            input: tx.raw_input || tx.decoded_input?.method_call || '0x',
+            nonce: tx.nonce || 0,
+            output: '',
+            logs: '',
+            r: '',
+            s: '',
+            status: tx.status === 'ok' ? '0x1' : '0x0',
+            timestamp: tx.timestamp ? new Date(tx.timestamp).getTime() : 0,
+            to: tx.to?.hash || '',
+            v: '',
+            value: '0x' + (BigInt(tx.value || '0')).toString(16),
+        }));
+
         return {
-            results: response.data.items || [],
+            results,
             contracts: {},
-            total: response.data.items?.length || 0,
+            total_count: items.length,
+            more: !!response.data.next_page_params,
         };
     }
 
@@ -307,13 +355,61 @@ export class BlockscoutAdapter {
      * Token transfers - /v1/account/{addr}/transfers → /api/v2/addresses/{addr}/token-transfers
      */
     async getTokenTransfers(account: string, params?: { type?: string; limit?: number; offset?: number }) {
+        // Blockscout v2 uses 'type' param with values like 'ERC-20', 'ERC-721', 'ERC-1155'
+        const queryParams: Record<string, string> = {};
+        if (params?.type) {
+            queryParams.type = params.type.replace('erc', 'ERC-').replace('ERC', 'ERC-').replace('ERC--', 'ERC-');
+        }
+
         const response = await this.indexer.get(`/api/v2/addresses/${account}/token-transfers`, {
-            params,
+            params: queryParams,
+        });
+
+        const items = response.data.items || [];
+        const contracts: Record<string, unknown> = {};
+
+        const results = items.map((transfer: {
+            token: BlockscoutToken;
+            total: { value?: string; decimals?: string; token_id?: string; token_instance?: unknown } | null;
+            from: { hash: string };
+            to: { hash: string };
+            tx_hash?: string;
+            transaction_hash?: string;
+            block_number: number;
+            timestamp: string;
+            type: string;
+            token_ids?: string[];
+        }) => {
+            const tokenAddr = transfer.token?.address_hash || '';
+            if (transfer.token && !contracts[tokenAddr]) {
+                contracts[tokenAddr] = {
+                    address: tokenAddr,
+                    name: transfer.token.name,
+                    symbol: transfer.token.symbol,
+                    decimals: parseInt(transfer.token.decimals || '18'),
+                    calldata: JSON.stringify({ name: transfer.token.name, symbol: transfer.token.symbol }),
+                    supportedInterfaces: [transfer.token.type?.toLowerCase().replace('-', '') || 'erc20'],
+                };
+            }
+
+            const tokenType = (transfer.token?.type || 'ERC-20').toLowerCase().replace('-', '') as 'erc20' | 'erc721' | 'erc1155';
+
+            return {
+                amount: transfer.total?.value || '0',
+                contract: tokenAddr,
+                blockNumber: transfer.block_number || 0,
+                from: transfer.from?.hash || '',
+                to: transfer.to?.hash || '',
+                type: tokenType,
+                transaction: transfer.transaction_hash || transfer.tx_hash || '',
+                timestamp: transfer.timestamp ? new Date(transfer.timestamp).getTime() : 0,
+                id: transfer.total?.token_id || transfer.token_ids?.[0] || undefined,
+            };
         });
 
         return {
-            results: response.data.items || [],
-            contracts: {},
+            results,
+            contracts,
         };
     }
 
