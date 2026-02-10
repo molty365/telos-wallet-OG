@@ -322,13 +322,13 @@ export class BlockscoutAdapter {
      * Workaround: Query Approval events from logs
      * Note: This is limited and may not catch all approvals
      */
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getApprovals(account: string, params?: { type?: string }) {
         // Blockscout doesn't have a dedicated approvals endpoint
         // We'd need to either:
         // 1. Query logs for Approval events (complex, requires parsing)
         // 2. Use on-chain calls to check allowances (slow)
         // 3. Keep the old indexer running just for approvals
-        
         console.warn('Approvals endpoint not available in Blockscout - returning empty results');
         return {
             results: [],

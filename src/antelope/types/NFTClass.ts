@@ -6,7 +6,6 @@ import {
     IndexerContract,
     IndexerNftItemAttribute,
     IndexerNftMetadata,
-    IndexerTokenHoldersResponse,
 } from 'src/antelope/types/IndexerTypes';
 import { IPFS_GATEWAY, extractNftMetadata } from 'src/antelope/stores/utils/nft-utils';
 import { useContractStore } from 'src/antelope/stores/contract';
@@ -79,9 +78,9 @@ export async function getErc1155OwnersFromIndexer(contractAddress: string, token
         const holdersResponse = (await indexer.get(`/api/v2/tokens/${contractAddress}/holders`, {
             params: { limit: 10000, token_id: tokenId },
         })).data;
-        
+
         const holders = holdersResponse.items || [];
-        
+
         return holders.reduce((acc: { [address: string]: number }, current: { address: { hash: string }; value: string }) => {
             acc[current.address.hash] = +current.value;
             return acc;
