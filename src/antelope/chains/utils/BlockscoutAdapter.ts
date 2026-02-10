@@ -319,22 +319,37 @@ export class BlockscoutAdapter {
 
     /**
      * Approvals - No direct Blockscout equivalent
-     * Workaround: Query Approval events from logs
-     * Note: This is limited and may not catch all approvals
+     *
+     * LIMITATION: Blockscout doesn't track token approvals like the old Teloscan API did.
+     * Users won't see their existing approvals in the UI, but can still:
+     * - Manually revoke approvals if they know the spender address
+     * - New approvals they make will work normally
+     *
+     * TODO: Implement proper solution via one of:
+     * 1. Query /api/v2/addresses/{addr}/logs for Approval events
+     *    (topic0 = 0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925)
+     * 2. On-chain allowance() queries for known spenders (DEXes, bridges)
+     * 3. Run a separate microservice that indexes Approval events
      */
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async getApprovals(account: string, params?: { type?: string }) {
-        // Blockscout doesn't have a dedicated approvals endpoint
-        // We'd need to either:
-        // 1. Query logs for Approval events (complex, requires parsing)
-        // 2. Use on-chain calls to check allowances (slow)
-        // 3. Keep the old indexer running just for approvals
-        console.warn('Approvals endpoint not available in Blockscout - returning empty results');
+        // Log once per session to avoid spam
+        if (!this._approvalsWarningShown) {
+            console.warn(
+                '[BlockscoutAdapter] Token approvals viewing is currently unavailable. ' +
+                'Blockscout does not provide an approvals endpoint. ' +
+                'Users can still revoke approvals manually.',
+            );
+            this._approvalsWarningShown = true;
+        }
+
         return {
             results: [],
             contracts: {},
         };
     }
+
+    private _approvalsWarningShown = false;
 }
 
 export default BlockscoutAdapter;
