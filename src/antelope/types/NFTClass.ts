@@ -178,7 +178,25 @@ export async function constructNft(
     };
 
     if (isErc721) {
-        const contractInstance = await (await contractStore.getContract(CURRENT_CONTEXT, contract.address, 'erc721'))?.getContractInstance();
+        let contractInstance = await (await contractStore.getContract(CURRENT_CONTEXT, contract.address, 'erc721'))?.getContractInstance();
+
+        // Fallback: if Blockscout hasn't indexed this contract, create instance with standard ERC721 ABI
+        if (!contractInstance) {
+            try {
+                const { getAntelope } = await import('src/antelope');
+                const provider = await getAntelope().wallets.getWeb3Provider(CURRENT_CONTEXT);
+                const minimalErc721Abi = [
+                    'function ownerOf(uint256 tokenId) view returns (address)',
+                    'function balanceOf(address owner) view returns (uint256)',
+                    'function tokenURI(uint256 tokenId) view returns (string)',
+                    'function name() view returns (string)',
+                    'function symbol() view returns (string)',
+                ];
+                contractInstance = new ethers.Contract(contract.address, minimalErc721Abi, provider);
+            } catch (e) {
+                console.error('Error creating fallback ERC721 contract instance', e);
+            }
+        }
 
         if (!contractInstance) {
             console.error('Error getting contract instance');
