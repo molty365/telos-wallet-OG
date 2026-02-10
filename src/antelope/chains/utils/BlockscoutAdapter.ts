@@ -123,7 +123,7 @@ export class BlockscoutAdapter {
         try {
             const response = await this.indexer.get('/api/v2/stats');
             const stats = response.data as BlockscoutStats;
-            
+
             return {
                 success: true,
                 blockNumber: parseInt(stats.total_blocks) || 0,
@@ -149,7 +149,7 @@ export class BlockscoutAdapter {
         const response = await this.indexer.get(`/api/v2/addresses/${account}/tokens`, {
             params: { type: 'ERC-20', ...params },
         });
-        
+
         const items = response.data.items as BlockscoutAddressToken[];
         const results: LegacyTokenBalance[] = [];
         const contracts: LegacyBalancesResponse['contracts'] = {};
@@ -185,9 +185,9 @@ export class BlockscoutAdapter {
         const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/holders`, {
             params,
         });
-        
+
         const items = response.data.items as BlockscoutTokenHolder[];
-        
+
         // If filtering by account, filter the results
         let filteredItems = items;
         if (params?.account) {
@@ -212,7 +212,7 @@ export class BlockscoutAdapter {
         try {
             const response = await this.indexer.get(`/api/v2/smart-contracts/${address}`);
             const contract = response.data as BlockscoutSmartContract;
-            
+
             return {
                 address: contract.address_hash,
                 name: contract.name,
@@ -236,11 +236,11 @@ export class BlockscoutAdapter {
      */
     async getAccountNfts(account: string, params?: { type?: string; limit?: number; offset?: number }) {
         const nftType = params?.type === 'ERC721' ? 'ERC-721' : params?.type === 'ERC1155' ? 'ERC-1155' : undefined;
-        
+
         const response = await this.indexer.get(`/api/v2/addresses/${account}/nft`, {
             params: { type: nftType, ...params },
         });
-        
+
         return this.transformNftResponse(response.data.items || []);
     }
 
@@ -251,7 +251,7 @@ export class BlockscoutAdapter {
         const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/instances`, {
             params,
         });
-        
+
         return this.transformNftResponse(response.data.items || [], contractAddress);
     }
 
@@ -294,7 +294,7 @@ export class BlockscoutAdapter {
         const response = await this.indexer.get(`/api/v2/addresses/${address}/transactions`, {
             params,
         });
-        
+
         // Transform to legacy format - this is a simplified version
         return {
             results: response.data.items || [],
@@ -310,7 +310,7 @@ export class BlockscoutAdapter {
         const response = await this.indexer.get(`/api/v2/addresses/${account}/token-transfers`, {
             params,
         });
-        
+
         return {
             results: response.data.items || [],
             contracts: {},
