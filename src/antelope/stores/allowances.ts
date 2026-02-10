@@ -559,12 +559,12 @@ export const useAllowancesStore = defineStore(store_name, {
             this.__erc_1155_allowances[label] = [];
         },
         async fetchBalanceString(data: IndexerErc20AllowanceResult): Promise<string> {
-            const indexer = (useChainStore().loggedChain.settings as EVMChainSettings).getIndexer();
-            const results = (await indexer.get(`/v1/token/${data.contract}/holders?account=${data.owner}`)).data.results;
-            if (results.length === 0) {
+            const chainSettings = useChainStore().loggedChain.settings as EVMChainSettings;
+            const response = await chainSettings.getTokenHolders(data.contract, { account: data.owner });
+            if (response.results.length === 0) {
                 return '0';
             } else {
-                const balanceString = results[0].balance;
+                const balanceString = response.results[0].balance;
                 return balanceString;
             }
         },
@@ -641,8 +641,9 @@ export const useAllowancesStore = defineStore(store_name, {
                 }
 
                 const collectionInfo = await useContractStore().getContract(CURRENT_CONTEXT, data.contract);
-                const indexer = (useChainStore().loggedChain.settings as EVMChainSettings).getIndexer();
-                const balanceString = (await indexer.get(`/v1/token/${data.contract}/holders?account=${data.owner}`)).data.results[0].balance;
+                const chainSettings = useChainStore().loggedChain.settings as EVMChainSettings;
+                const holdersResponse = await chainSettings.getTokenHolders(data.contract, { account: data.owner });
+                const balanceString = holdersResponse.results[0]?.balance ?? '0';
 
                 const balance = BigNumber.from(balanceString);
 
@@ -673,8 +674,9 @@ export const useAllowancesStore = defineStore(store_name, {
                     return null;
                 }
 
-                const indexer = (useChainStore().loggedChain.settings as EVMChainSettings).getIndexer();
-                const holderInfoForOwner = (await indexer.get(`/v1/token/${data.contract}/holders?account=${data.owner}&limit=${ALLOWANCES_LIMIT}`)).data.results as { balance: string }[];
+                const chainSettings = useChainStore().loggedChain.settings as EVMChainSettings;
+                const holdersResponse = await chainSettings.getTokenHolders(data.contract, { account: data.owner, limit: ALLOWANCES_LIMIT });
+                const holderInfoForOwner = holdersResponse.results as { balance: string }[];
                 const totalNftsOwned = holderInfoForOwner.reduce((acc, holderInfo) => acc.add(holderInfo.balance), BigNumber.from(0));
 
                 return collectionInfo ? {
