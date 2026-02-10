@@ -82,7 +82,7 @@ export interface LegacyBalancesResponse {
         decimals: number;
         calldata?: {
             price?: number;
-            marketdata_updated?: number;
+            marketdata_updated?: string;
         };
     }>;
 }
@@ -167,7 +167,7 @@ export class BlockscoutAdapter {
                 decimals: parseInt(item.token.decimals) || 18,
                 calldata: item.token.exchange_rate ? {
                     price: parseFloat(item.token.exchange_rate),
-                    marketdata_updated: Date.now(),
+                    marketdata_updated: String(Date.now()),
                 } : undefined,
             };
         }
