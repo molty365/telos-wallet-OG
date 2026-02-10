@@ -180,7 +180,7 @@ export class BlockscoutAdapter {
      */
     async getTokenHolders(
         contractAddress: string,
-        params?: { limit?: number; account?: string; token_id?: string }
+        params?: { limit?: number; account?: string; token_id?: string },
     ): Promise<LegacyTokenHoldersResponse> {
         const response = await this.indexer.get(`/api/v2/tokens/${contractAddress}/holders`, {
             params,
@@ -192,7 +192,7 @@ export class BlockscoutAdapter {
         let filteredItems = items;
         if (params?.account) {
             filteredItems = items.filter(
-                item => item.address.hash.toLowerCase() === params.account?.toLowerCase()
+                item => item.address.hash.toLowerCase() === params.account?.toLowerCase(),
             );
         }
 

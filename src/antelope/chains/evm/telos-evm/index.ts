@@ -66,7 +66,6 @@ const BRIDGE_URL = 'https://bridge.telos.net/bridge';
 const NETWORK_EVM_ENDPOINT = 'https://mainnet.telos.net';
 // Blockscout API (replaces legacy api.teloscan.io)
 const INDEXER_ENDPOINT = 'https://teloscan.io';
-const INDEXER_API_VERSION = 'blockscout'; // 'blockscout' or 'legacy'
 const CONTRACTS_BUCKET = 'https://verified-evm-contracts.s3.amazonaws.com';
 
 declare const fathom: { trackEvent: (eventName: string) => void };
