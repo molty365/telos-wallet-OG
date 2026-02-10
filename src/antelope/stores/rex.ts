@@ -13,6 +13,7 @@ import { toRaw } from 'vue';
 import { AccountModel, useAccountStore } from 'src/antelope/stores/account';
 import EVMChainSettings from 'src/antelope/chains/EVMChainSettings';
 import { WEI_PRECISION } from 'src/antelope/stores/utils';
+import { escrowAbiRead } from 'src/antelope/stores/utils/abi/escrowAbi';
 import { subscribeForTransactionReceipt } from 'src/antelope/stores/utils/trx-utils';
 import { createTraceFunction } from 'src/antelope/config';
 import { prettyTimePeriod } from 'src/antelope/stores/utils/date-utils';
@@ -118,9 +119,12 @@ export const useRexStore = defineStore(store_name, {
          */
         async getEscrowContractInstance(label: string) {
             this.trace('getEscrowContractInstance', label);
-            const address = (useChainStore().getChain(label).settings as EVMChainSettings).getEscrowContractAddress();
+            const chainSettings = useChainStore().getChain(label).settings as EVMChainSettings;
+            const address = chainSettings.getEscrowContractAddress();
             this.trace('getEscrowContractInstance', label, address);
-            return this.getContractInstance(label, address);
+            // Use built-in ABI since the escrow contract is unverified on Blockscout
+            const provider = await getAntelope().wallets.getWeb3Provider(label);
+            return new ethers.Contract(address, escrowAbiRead, provider);
         },
         /**
          * This method should be called to check if the REX system is available for a given context.
@@ -152,9 +156,19 @@ export const useRexStore = defineStore(store_name, {
         async updateUnstakingPeriod(label: string) {
             this.trace('updateUnstakingPeriod', label);
             if (this.isNetworkEVM(label)) {
-                const contract = await this.getEscrowContractInstance(label);
-                const period = await contract.lockDuration();
-                this.setUnstakingPeriod(label, period.toNumber());
+                try {
+                    // lockDuration() has a non-standard selector (0x04554443) on the escrow contract,
+                    // so we call it via raw eth_call instead of ethers ABI encoding
+                    const provider = await getAntelope().wallets.getWeb3Provider(label);
+                    const chainSettings = useChainStore().getChain(label).settings as EVMChainSettings;
+                    const escrowAddress = chainSettings.getEscrowContractAddress();
+                    const result = await provider.call({ to: escrowAddress, data: '0x04554443' });
+                    const period = ethers.BigNumber.from(result);
+                    this.setUnstakingPeriod(label, period.toNumber());
+                } catch (error) {
+                    console.warn('[Rex] lockDuration() failed, using default 10 days:', error);
+                    this.setUnstakingPeriod(label, 10 * 24 * 60 * 60);
+                }
             } else {
                 this.trace('updateUnstakingPeriod', label, 'not supported for native chains yet');
             }
@@ -181,15 +195,23 @@ export const useRexStore = defineStore(store_name, {
             this.trace('updateRexDataForAccount', label, account);
             useFeedbackStore().setLoading('updateRexDataForAccount');
             try {
-                await Promise.all([
+                // Use allSettled so one failure doesn't block the others
+                const results = await Promise.allSettled([
                     this.updateWithdrawable(label),    // account's data
                     this.updateDeposits(label),        // account's data
                     this.updateBalance(label),         // account's data
                     this.updateTotalStaking(label),    // system's data
                     this.updateUnstakingPeriod(label), // system's data
                 ]);
+                results.forEach((result, i) => {
+                    if (result.status === 'rejected') {
+                        const names = ['updateWithdrawable', 'updateDeposits', 'updateBalance', 'updateTotalStaking', 'updateUnstakingPeriod'];
+                        console.warn(`[Rex] ${names[i]} failed:`, result.reason);
+                    }
+                });
             } catch (error) {
                 console.error(error);
+            } finally {
                 useFeedbackStore().unsetLoading('updateRexDataForAccount');
             }
         },
