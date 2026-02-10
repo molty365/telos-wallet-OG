@@ -132,6 +132,15 @@ export const useBalancesStore = defineStore(store_name, {
                             const authenticator = account.authenticator as EVMAuthenticator;
                             const wrapBalance = await authenticator.getERC20TokenBalance(account.account, wrapTokens.address as addressString);
 
+                            // Workaround-STLOS: fetch STLOS balance directly from contract (Blockscout may not have indexed it)
+                            const stakedToken = chain_settings.getStakedSystemToken();
+                            let stakedBalance = BigNumber.from(0);
+                            try {
+                                stakedBalance = await authenticator.getERC20TokenBalance(account.account, stakedToken.address as addressString);
+                            } catch (e) {
+                                console.warn('Failed to fetch STLOS balance from contract:', e);
+                            }
+
                             // Fetch native TLOS balance from RPC (Blockscout only returns ERC-20 balances)
                             await this.updateSystemBalanceForAccount(label, account.account as addressString);
 
@@ -156,6 +165,9 @@ export const useBalancesStore = defineStore(store_name, {
 
                             // Workaround-WTLOS: now we overwrite the value with the one taken from the contract
                             this.processBalanceForToken(label, wrapTokens, wrapBalance);
+
+                            // Workaround-STLOS: overwrite with contract-fetched balance
+                            this.processBalanceForToken(label, stakedToken, stakedBalance);
 
                             this.sortBalances(label);
 
