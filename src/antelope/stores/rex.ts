@@ -14,6 +14,7 @@ import { AccountModel, useAccountStore } from 'src/antelope/stores/account';
 import EVMChainSettings from 'src/antelope/chains/EVMChainSettings';
 import { WEI_PRECISION } from 'src/antelope/stores/utils';
 import { escrowAbiRead } from 'src/antelope/stores/utils/abi/escrowAbi';
+import { stlosAbiRead } from 'src/antelope/stores/utils/abi/stlosAbi';
 import { subscribeForTransactionReceipt } from 'src/antelope/stores/utils/trx-utils';
 import { createTraceFunction } from 'src/antelope/config';
 import { prettyTimePeriod } from 'src/antelope/stores/utils/date-utils';
@@ -108,9 +109,12 @@ export const useRexStore = defineStore(store_name, {
          */
         async getStakedSystemContractInstance(label: string) {
             this.trace('getStakedSystemContractInstance', label);
-            const address = (useChainStore().getChain(label).settings as EVMChainSettings).getStakedSystemToken().address;
+            const chainSettings = useChainStore().getChain(label).settings as EVMChainSettings;
+            const address = chainSettings.getStakedSystemToken().address;
             this.trace('getStakedSystemContractInstance', label, address);
-            return this.getContractInstance(label, address);
+            // Use built-in ABI since STLOS contract is unverified on Blockscout
+            const provider = await getAntelope().wallets.getWeb3Provider(label);
+            return new ethers.Contract(address, stlosAbiRead, provider);
         },
         /**
          * auxiliar method to get the escrow contract instance
