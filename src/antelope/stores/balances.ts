@@ -132,7 +132,10 @@ export const useBalancesStore = defineStore(store_name, {
                             const authenticator = account.authenticator as EVMAuthenticator;
                             const wrapBalance = await authenticator.getERC20TokenBalance(account.account, wrapTokens.address as addressString);
 
-                            // now we call the indexer
+                            // Fetch native TLOS balance from RPC (Blockscout only returns ERC-20 balances)
+                            await this.updateSystemBalanceForAccount(label, account.account as addressString);
+
+                            // now we call the indexer for ERC-20 balances
                             const newBalances = await chain_settings.getBalances(account.account);
 
                             if (this.__balances[label].length === 0) {
