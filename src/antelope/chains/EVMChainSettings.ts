@@ -742,22 +742,214 @@ export default abstract class EVMChainSettings implements ChainSettings {
 
     // allowances
 
+    /**
+     * Fetch ERC-20 approvals by scanning on-chain Approval event logs via RPC,
+     * then verifying current allowance with eth_call.
+     * This bypasses Blockscout's incomplete indexing.
+     */
     async fetchErc20Allowances(account: string, filter: IndexerAllowanceFilter): Promise<IndexerAllowanceResponseErc20> {
-        // Note: Blockscout doesn't have a direct approvals endpoint
-        // This returns empty results - approvals feature limited until workaround implemented
-        const response = await this.blockscoutAdapter.getApprovals(account, { type: 'erc20' });
-        return response as unknown as IndexerAllowanceResponseErc20;
+        const trace = createTraceFunction('EVMChainSettings');
+        trace('fetchErc20Allowances', account);
+
+        // ERC-20 Approval(address indexed owner, address indexed spender, uint256 value)
+        const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925';
+        const paddedOwner = '0x' + account.slice(2).toLowerCase().padStart(64, '0');
+
+        try {
+            // Get current block number for scanning range
+            const latestBlock = await this.getLatestBlock();
+            // Scan last ~2M blocks (~30 days on Telos at ~0.5s blocks)
+            const fromBlock = latestBlock.sub(2_000_000).lt(0)
+                ? ethers.BigNumber.from(0)
+                : latestBlock.sub(2_000_000);
+
+            // Query Approval logs where owner = account
+            const logsResponse = await this.doRPC<{ result: Array<{
+                address: string;
+                topics: string[];
+                data: string;
+                blockNumber: string;
+            }> }>({
+                method: 'eth_getLogs',
+                params: [{
+                    fromBlock: fromBlock.toHexString(),
+                    toBlock: 'latest',
+                    topics: [APPROVAL_TOPIC, paddedOwner],
+                }],
+            });
+
+            const logs = logsResponse.result || [];
+            trace('fetchErc20Allowances', `Found ${logs.length} Approval logs`);
+
+            // Deduplicate by (contract, spender) — keep latest by block number
+            const approvalMap = new Map<string, { contract: string; spender: string; blockNumber: number }>();
+            for (const log of logs) {
+                if (!log.topics || log.topics.length < 3) {
+                    continue;
+                }
+                const contract = log.address.toLowerCase();
+                const spender = '0x' + log.topics[2].slice(26);
+                const key = `${contract}:${spender}`;
+                const blockNum = parseInt(log.blockNumber, 16);
+
+                const existing = approvalMap.get(key);
+                if (!existing || blockNum > existing.blockNumber) {
+                    approvalMap.set(key, { contract, spender, blockNumber: blockNum });
+                }
+            }
+
+            // For each unique approval, check current on-chain allowance
+            // allowance(address owner, address spender) → uint256
+            const ALLOWANCE_SELECTOR = '0xdd62ed3e';
+            const results: IndexerAllowanceResponseErc20['results'] = [];
+            const contracts: IndexerAllowanceResponseErc20['contracts'] = {};
+
+            const allowanceChecks = Array.from(approvalMap.values()).map(async ({ contract, spender, blockNumber }) => {
+                try {
+                    const callData = ALLOWANCE_SELECTOR +
+                        account.slice(2).toLowerCase().padStart(64, '0') +
+                        spender.slice(2).toLowerCase().padStart(64, '0');
+
+                    const allowanceResponse = await this.doRPC<{ result: string }>({
+                        method: 'eth_call',
+                        params: [{ to: contract, data: callData }, 'latest'],
+                    });
+
+                    const amount = allowanceResponse.result || '0x0';
+                    const amountBN = ethers.BigNumber.from(amount);
+
+                    // Only include non-zero allowances (or include all if filter says so)
+                    results.push({
+                        owner: account.toLowerCase(),
+                        contract: contract,
+                        spender: spender,
+                        amount: amountBN.toString(),
+                        updated: blockNumber * 500, // rough ms estimate
+                    });
+
+                    // Try to get contract info for display
+                    if (!contracts[contract]) {
+                        contracts[contract] = {
+                            address: contract,
+                            name: '',
+                            symbol: '',
+                            creator: '',
+                            fromTrace: false,
+                            trace_address: '',
+                            supply: '0',
+                            decimals: 18,
+                            block: 0,
+                            transaction: '',
+                        } as IndexerContract;
+
+                        // Try to enrich with Blockscout data
+                        try {
+                            const tokenBalances = await this.blockscoutAdapter.getBalances(account);
+                            const tokenInfo = tokenBalances.contracts[contract];
+                            if (tokenInfo) {
+                                contracts[contract].name = tokenInfo.name || '';
+                                contracts[contract].symbol = tokenInfo.symbol || '';
+                                contracts[contract].decimals = tokenInfo.decimals || 18;
+                            }
+                        } catch {
+                            // keep defaults
+                        }
+                    }
+                } catch (err) {
+                    trace('fetchErc20Allowances', `Failed to check allowance for ${contract}:${spender}`, err);
+                }
+            });
+
+            // Run all allowance checks in parallel (batches of 10 to avoid RPC rate limits)
+            for (let i = 0; i < allowanceChecks.length; i += 10) {
+                await Promise.all(allowanceChecks.slice(i, i + 10));
+            }
+
+            return { results, contracts };
+        } catch (err) {
+            trace('fetchErc20Allowances', 'Failed to fetch approvals via RPC logs', err);
+            return { results: [], contracts: {} };
+        }
     }
 
+    /**
+     * Fetch ERC-721 approvals by scanning ApprovalForAll events.
+     */
     async fetchErc721Allowances(account: string, filter: IndexerAllowanceFilter): Promise<IndexerAllowanceResponseErc721> {
-        // Note: Blockscout doesn't have a direct approvals endpoint
-        const response = await this.blockscoutAdapter.getApprovals(account, { type: 'erc721' });
-        return response as unknown as IndexerAllowanceResponseErc721;
+        const trace = createTraceFunction('EVMChainSettings');
+        trace('fetchErc721Allowances', account);
+
+        // ApprovalForAll(address indexed owner, address indexed operator, bool approved)
+        const APPROVAL_FOR_ALL_TOPIC = '0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31';
+        const paddedOwner = '0x' + account.slice(2).toLowerCase().padStart(64, '0');
+
+        try {
+            const latestBlock = await this.getLatestBlock();
+            const fromBlock = latestBlock.sub(2_000_000).lt(0)
+                ? ethers.BigNumber.from(0)
+                : latestBlock.sub(2_000_000);
+
+            const logsResponse = await this.doRPC<{ result: Array<{
+                address: string;
+                topics: string[];
+                data: string;
+                blockNumber: string;
+            }> }>({
+                method: 'eth_getLogs',
+                params: [{
+                    fromBlock: fromBlock.toHexString(),
+                    toBlock: 'latest',
+                    topics: [APPROVAL_FOR_ALL_TOPIC, paddedOwner],
+                }],
+            });
+
+            const logs = logsResponse.result || [];
+
+            // Deduplicate by (contract, operator) — keep latest
+            const approvalMap = new Map<string, { contract: string; operator: string; approved: boolean; blockNumber: number }>();
+            for (const log of logs) {
+                if (!log.topics || log.topics.length < 3) {
+                    continue;
+                }
+                const contract = log.address.toLowerCase();
+                const operator = '0x' + log.topics[2].slice(26);
+                const approved = log.data !== '0x' + '0'.repeat(64); // data encodes bool
+                const key = `${contract}:${operator}`;
+                const blockNum = parseInt(log.blockNumber, 16);
+
+                const existing = approvalMap.get(key);
+                if (!existing || blockNum > existing.blockNumber) {
+                    approvalMap.set(key, { contract, operator, approved, blockNumber: blockNum });
+                }
+            }
+
+            const results = Array.from(approvalMap.values()).map(({ contract, operator, approved, blockNumber }) => ({
+                owner: account.toLowerCase(),
+                contract,
+                operator,
+                approved,
+                single: false as const,
+                updated: blockNumber * 500,
+            }));
+
+            return { results, contracts: {} };
+        } catch (err) {
+            trace('fetchErc721Allowances', 'Failed to fetch ERC-721 approvals', err);
+            return { results: [], contracts: {} };
+        }
     }
 
     async fetchErc1155Allowances(account: string, filter: IndexerAllowanceFilter): Promise<IndexerAllowanceResponseErc1155> {
-        // Note: Blockscout doesn't have a direct approvals endpoint
-        const response = await this.blockscoutAdapter.getApprovals(account, { type: 'erc1155' });
-        return response as unknown as IndexerAllowanceResponseErc1155;
+        // ERC-1155 uses the same ApprovalForAll event as ERC-721
+        // Reuse the same logic but shape results differently
+        const erc721Results = await this.fetchErc721Allowances(account, filter);
+        const results = erc721Results.results.map(r => ({
+            owner: r.owner,
+            contract: r.contract,
+            operator: r.operator,
+            approved: r.approved,
+            updated: r.updated,
+        }));
+        return { results, contracts: {} };
     }
 }
