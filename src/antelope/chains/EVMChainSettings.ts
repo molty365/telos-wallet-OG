@@ -772,13 +772,13 @@ export default abstract class EVMChainSettings implements ChainSettings {
             const maxPages = 10; // limit pagination to avoid excessive requests
 
             do {
-                const url = nextPageParams
+                const txUrl: string = nextPageParams
                     ? `/api/v2/addresses/${account}/transactions?${nextPageParams}`
                     : `/api/v2/addresses/${account}/transactions`;
 
-                const response = await this.indexer.get(url);
-                const items = response.data.items || [];
-                const nextPage = response.data.next_page_params;
+                const txResponse: AxiosResponse = await this.indexer.get(txUrl);
+                const items: Array<{ raw_input?: string; method?: string; to?: { hash?: string } }> = txResponse.data.items || [];
+                const nextPage: Record<string, string> | null = txResponse.data.next_page_params;
 
                 for (const tx of items) {
                     const rawInput = tx.raw_input || '';
