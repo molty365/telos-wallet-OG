@@ -753,72 +753,73 @@ export default abstract class EVMChainSettings implements ChainSettings {
     // allowances
 
     /**
-     * Fetch ERC-20 approvals by scanning on-chain Approval event logs via RPC,
-     * then verifying current allowance with eth_call.
-     * This bypasses Blockscout's incomplete indexing.
+     * Fetch ERC-20 approvals by scanning the user's transaction history from Blockscout
+     * for approve() calls (0x095ea7b3), then verifying current on-chain allowance.
+     * This avoids eth_getLogs block range limits.
      */
     async fetchErc20Allowances(account: string, filter: IndexerAllowanceFilter): Promise<IndexerAllowanceResponseErc20> {
         const trace = createTraceFunction('EVMChainSettings');
         trace('fetchErc20Allowances', account);
 
-        // ERC-20 Approval(address indexed owner, address indexed spender, uint256 value)
-        const APPROVAL_TOPIC = '0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925';
-        const paddedOwner = '0x' + account.slice(2).toLowerCase().padStart(64, '0');
+        const APPROVE_SELECTOR = '0x095ea7b3';
+        const ALLOWANCE_SELECTOR = '0xdd62ed3e';
 
         try {
-            // Get current block number for scanning range
-            const latestBlock = await this.getLatestBlock();
-            // Scan last ~2M blocks (~30 days on Telos at ~0.5s blocks)
-            const fromBlock = latestBlock.sub(2_000_000).lt(0)
-                ? ethers.BigNumber.from(0)
-                : latestBlock.sub(2_000_000);
+            // Step 1: Get all transactions from Blockscout and find approve() calls
+            const approvalMap = new Map<string, { contract: string; spender: string }>();
+            let nextPageParams: string | null = null;
+            let pageCount = 0;
+            const maxPages = 10; // limit pagination to avoid excessive requests
 
-            // Query Approval logs where owner = account
-            const logsResponse = await this.doRPC<{ result: Array<{
-                address: string;
-                topics: string[];
-                data: string;
-                blockNumber: string;
-            }> }>({
-                method: 'eth_getLogs',
-                params: [{
-                    fromBlock: fromBlock.toHexString(),
-                    toBlock: 'latest',
-                    topics: [APPROVAL_TOPIC, paddedOwner],
-                }],
-            });
+            do {
+                const url = nextPageParams
+                    ? `/api/v2/addresses/${account}/transactions?${nextPageParams}`
+                    : `/api/v2/addresses/${account}/transactions`;
 
-            const logs = logsResponse.result || [];
-            trace('fetchErc20Allowances', `Found ${logs.length} Approval logs`);
+                const response = await this.indexer.get(url);
+                const items = response.data.items || [];
+                const nextPage = response.data.next_page_params;
 
-            // Deduplicate by (contract, spender) — keep latest by block number
-            const approvalMap = new Map<string, { contract: string; spender: string; blockNumber: number }>();
-            for (const log of logs) {
-                if (!log.topics || log.topics.length < 3) {
-                    continue;
+                for (const tx of items) {
+                    const rawInput = tx.raw_input || '';
+                    const method = tx.method || '';
+
+                    // Check for approve(address spender, uint256 amount) calls
+                    if (method === APPROVE_SELECTOR || (rawInput && rawInput.startsWith(APPROVE_SELECTOR))) {
+                        if (rawInput && rawInput.length >= 138) {
+                            const tokenContract = (tx.to?.hash || '').toLowerCase();
+                            const spender = '0x' + rawInput.substring(34, 74).toLowerCase();
+                            const key = `${tokenContract}:${spender}`;
+
+                            if (tokenContract && !approvalMap.has(key)) {
+                                approvalMap.set(key, { contract: tokenContract, spender });
+                            }
+                        }
+                    }
                 }
-                const contract = log.address.toLowerCase();
-                const spender = '0x' + log.topics[2].slice(26);
-                const key = `${contract}:${spender}`;
-                const blockNum = parseInt(log.blockNumber, 16);
 
-                const existing = approvalMap.get(key);
-                if (!existing || blockNum > existing.blockNumber) {
-                    approvalMap.set(key, { contract, spender, blockNumber: blockNum });
+                // Build next page query string
+                if (nextPage && typeof nextPage === 'object') {
+                    nextPageParams = Object.entries(nextPage)
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join('&');
+                } else {
+                    nextPageParams = null;
                 }
-            }
+                pageCount++;
+            } while (nextPageParams && pageCount < maxPages);
 
-            // For each unique approval, check current on-chain allowance
-            // allowance(address owner, address spender) → uint256
-            const ALLOWANCE_SELECTOR = '0xdd62ed3e';
+            trace('fetchErc20Allowances', `Found ${approvalMap.size} unique approve calls`);
+
+            // Step 2: Check current on-chain allowance for each
             const results: IndexerAllowanceResponseErc20['results'] = [];
             const contracts: IndexerAllowanceResponseErc20['contracts'] = {};
+            const ownerPadded = account.slice(2).toLowerCase().padStart(64, '0');
 
-            const allowanceChecks = Array.from(approvalMap.values()).map(async ({ contract, spender, blockNumber }) => {
+            const allowanceChecks = Array.from(approvalMap.values()).map(async ({ contract, spender }) => {
                 try {
-                    const callData = ALLOWANCE_SELECTOR +
-                        account.slice(2).toLowerCase().padStart(64, '0') +
-                        spender.slice(2).toLowerCase().padStart(64, '0');
+                    const spenderPadded = spender.slice(2).toLowerCase().padStart(64, '0');
+                    const callData = ALLOWANCE_SELECTOR + ownerPadded + spenderPadded;
 
                     const allowanceResponse = await this.doRPC<{ result: string }>({
                         method: 'eth_call',
@@ -828,16 +829,15 @@ export default abstract class EVMChainSettings implements ChainSettings {
                     const amount = allowanceResponse.result || '0x0';
                     const amountBN = ethers.BigNumber.from(amount);
 
-                    // Only include non-zero allowances (or include all if filter says so)
                     results.push({
                         owner: account.toLowerCase(),
                         contract: contract,
                         spender: spender,
                         amount: amountBN.toString(),
-                        updated: blockNumber * 500, // rough ms estimate
+                        updated: Date.now(),
                     });
 
-                    // Try to get contract info for display
+                    // Enrich contract info
                     if (!contracts[contract]) {
                         contracts[contract] = {
                             address: contract,
@@ -852,7 +852,6 @@ export default abstract class EVMChainSettings implements ChainSettings {
                             transaction: '',
                         } as IndexerContract;
 
-                        // Try to enrich with Blockscout data
                         try {
                             const tokenBalances = await this.blockscoutAdapter.getBalances(account);
                             const tokenInfo = tokenBalances.contracts[contract];
@@ -870,14 +869,14 @@ export default abstract class EVMChainSettings implements ChainSettings {
                 }
             });
 
-            // Run all allowance checks in parallel (batches of 10 to avoid RPC rate limits)
+            // Run in batches of 10
             for (let i = 0; i < allowanceChecks.length; i += 10) {
                 await Promise.all(allowanceChecks.slice(i, i + 10));
             }
 
             return { results, contracts };
         } catch (err) {
-            trace('fetchErc20Allowances', 'Failed to fetch approvals via RPC logs', err);
+            trace('fetchErc20Allowances', 'Failed to fetch approvals', err);
             return { results: [], contracts: {} };
         }
     }
