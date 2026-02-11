@@ -101,6 +101,7 @@ export interface LegacyBalancesResponse {
         name: string;
         symbol: string;
         decimals: number;
+        logoURI?: string;
         calldata?: {
             price?: number;
             marketdata_updated?: string;
@@ -187,6 +188,7 @@ export class BlockscoutAdapter {
                 name: item.token.name,
                 symbol: item.token.symbol,
                 decimals: parseInt(item.token.decimals) || 18,
+                logoURI: item.token.icon_url || undefined,
                 calldata: item.token.exchange_rate ? {
                     price: parseFloat(item.token.exchange_rate),
                     marketdata_updated: String(Date.now()),

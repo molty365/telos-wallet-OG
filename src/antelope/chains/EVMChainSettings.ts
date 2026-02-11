@@ -350,9 +350,21 @@ export default abstract class EVMChainSettings implements ChainSettings {
                     console.error('Error parsing calldata', `"${callDataStr}"`, e);
                 }
 
-                if (token) {
+                // Use token from list, or create one from Blockscout data
+                const resolvedToken = token ?? new TokenClass({
+                    name: contractData.name || 'Unknown',
+                    symbol: contractData.symbol || '???',
+                    network: this.getNetwork(),
+                    decimals: contractData.decimals || 18,
+                    address: result.contract,
+                    logoURI: (contractData as { logoURI?: string }).logoURI || undefined,
+                    isNative: false,
+                    isSystem: false,
+                } as TokenSourceInfo);
+
+                if (resolvedToken) {
                     const balance = ethers.BigNumber.from(result.balance);
-                    const tokenBalance = new TokenBalance(token, balance);
+                    const tokenBalance = new TokenBalance(resolvedToken, balance);
                     tokens.push(tokenBalance);
                     const priceIsCurrent =
                         !!contractData.calldata?.marketdata_updated &&
@@ -363,7 +375,7 @@ export default abstract class EVMChainSettings implements ChainSettings {
                         const price = (+(contractData.calldata.price ?? 0)).toFixed(12);
                         const marketInfo = { ...contractData.calldata, price } as MarketSourceInfo;
                         const marketData = new TokenMarketData(marketInfo);
-                        token.market = marketData;
+                        resolvedToken.market = marketData;
                     }
                 }
             }
