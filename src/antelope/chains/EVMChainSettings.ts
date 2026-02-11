@@ -291,6 +291,11 @@ export default abstract class EVMChainSettings implements ChainSettings {
     abstract getChainId(): string;
     abstract getDisplay(): string;
     abstract getHyperionEndpoint(): string;
+
+    // Override to use a dedicated EVM JSON-RPC endpoint instead of hyperion/evm
+    getEvmRpcEndpoint(): string | null {
+        return null;
+    }
     abstract getRPCEndpoint(): RpcEndpoint;
     abstract getApiEndpoint(): string;
     abstract getPriceData(): Promise<PriceChartData>;
@@ -687,6 +692,11 @@ export default abstract class EVMChainSettings implements ChainSettings {
             method,
             params,
         };
+        const evmRpcEndpoint = this.getEvmRpcEndpoint();
+        if (evmRpcEndpoint) {
+            return axios.post(evmRpcEndpoint, rpcPayload)
+                .then(response => response.data as T);
+        }
         return this.hyperion.post('/evm', rpcPayload)
             .then(response => response.data as T);
     }

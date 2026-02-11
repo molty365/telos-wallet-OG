@@ -64,6 +64,7 @@ const EXPLORER_URL = 'https://teloscan.io';
 const ECOSYSTEM_URL = 'https://www.telos.net/ecosystem';
 const BRIDGE_URL = 'https://bridge.telos.net/bridge';
 const NETWORK_EVM_ENDPOINT = 'https://mainnet.telos.net';
+const EVM_RPC_ENDPOINT = 'https://rpc.telos.net';
 // Blockscout API (replaces legacy api.teloscan.io)
 const INDEXER_ENDPOINT = 'https://teloscan.io';
 const CONTRACTS_BUCKET = 'https://verified-evm-contracts.s3.amazonaws.com';
@@ -85,6 +86,10 @@ export default class TelosEVMTestnet extends EVMChainSettings {
 
     getHyperionEndpoint(): string {
         return NETWORK_EVM_ENDPOINT;
+    }
+
+    getEvmRpcEndpoint(): string | null {
+        return EVM_RPC_ENDPOINT;
     }
 
     getRPCEndpoint(): RpcEndpoint {
