@@ -28,7 +28,7 @@ const S_TOKEN = new TokenClass({
     network: NETWORK,
     decimals: 18,
     address: '0xB4B01216a5Bc8F1C8A33CD990A1239030E60C905',
-    logo: 'branding/stlos.png',
+    logo: 'https://raw.githubusercontent.com/molty365/token-list/main/logos/stlos.png',
     isNative: false,
     isSystem: false,
 } as TokenSourceInfo);
@@ -39,7 +39,7 @@ const W_TOKEN = new TokenClass({
     network: NETWORK,
     decimals: 18,
     address: '0xD102cE6A4dB07D247fcc28F366A623Df0938CA9E',
-    logo: 'branding/wtlos.png',
+    logo: 'https://raw.githubusercontent.com/molty365/token-list/main/logos/wtlos.png',
     isNative: false,
     isSystem: false,
 } as TokenSourceInfo);
