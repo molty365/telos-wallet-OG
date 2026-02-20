@@ -86,12 +86,12 @@ watch(selectedNetwork, () => {
 </script>
 
 <template>
-<q-layout>
+<q-layout class="c-home__layout">
     <q-page-container class="c-home__page-container">
         <div class="c-home">
             <div class="c-home__container">
                 <div class="c-home__logo-container"><img
-                    src="branding/telos-wallet-light.png"
+                    src="branding/telos-wallet-light.svg"
                     :alt="$t('home.wallet_logo_alt')"
                     class="c-home__logo"
                 ></div>
@@ -139,9 +139,9 @@ watch(selectedNetwork, () => {
                     </a>
                     <q-icon size="16px" name="launch" />
                 </div>
-                <q-footer bordered class="c-home__footer">
+                <q-footer class="c-home__footer">
 
-                    <q-toolbar class="c-home__footer-second-line bg-dark flex-center">
+                    <q-toolbar class="c-home__footer-second-line">
                         <a
                             href="https://www.telos.net/terms-and-conditions"
                             target="_blank"
@@ -170,9 +170,52 @@ watch(selectedNetwork, () => {
 <style lang="scss">
 .c-home {
     position: relative;
-    background: var(--site-gradient);
+    background: #1B1B1D;
     width: 100%;
     padding-top: 64px;
+
+    // page-container needs same bg so padding area matches
+    &__page-container,
+    &__page-container .q-page {
+        background: transparent !important;
+    }
+    overflow: hidden;
+
+    // Concentric circle arcs (same as dark mode balance header)
+    &::before,
+    &::after {
+        content: '';
+        position: absolute;
+        border-radius: 50%;
+        border: 32px solid rgba(100, 100, 100, 0.12);
+        pointer-events: none;
+    }
+
+    &::before {
+        top: -15vh;
+        right: -20vh;
+        width: 55vh;
+        height: 55vh;
+    }
+
+    &::after {
+        top: -60%;
+        left: 20%;
+        width: 50vh;
+        height: 50vh;
+    }
+
+    // Subtle brand gradient overlay
+    .c-home__container::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(circle at 100% 0%, rgba(#00F2FE, 0.12), transparent 40%),
+            radial-gradient(circle at 0% 100%, rgba(#4FACFE, 0.08), transparent 50%),
+            radial-gradient(circle at 50% 50%, rgba(#C471F5, 0.06), transparent 60%);
+        pointer-events: none;
+    }
 
     &__page-container {
         // override inline style of unknown origin (do not delete)
@@ -276,9 +319,22 @@ watch(selectedNetwork, () => {
         }
     }
 
+    &__layout {
+        background: #1B1B1D;
+    }
+
     &__footer {
         position: absolute;
         bottom: 0;
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    &__footer-second-line {
+        background: transparent !important;
+        justify-content: center;
+        opacity: 0.5;
     }
 
     &__connect-wallet {
