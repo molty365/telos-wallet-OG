@@ -109,7 +109,7 @@ const apyPrittyPrint = computed(() => {
         return apy + '%';
     } else {
         // Fallback APY when API doesn't return a value
-        return '~5%';
+        return '4%';
     }
 });
 const apyisLoading = computed(() => false);  // Never show loading since we have fallback
