@@ -10,6 +10,7 @@ import {
     SafePalAuth,
 } from 'src/antelope/wallets';
 import { BraveAuth } from 'src/antelope/wallets/authenticators/BraveAuth';
+import { RabbyAuth } from 'src/antelope/wallets/authenticators/RabbyAuth';
 import { App } from 'vue';
 import { Router } from 'vue-router';
 import { resetNativeApi } from 'src/boot/api';
@@ -111,6 +112,7 @@ export default boot(({ app }) => {
     ant.wallets.addEVMAuthenticator(new MetamaskAuth());
     ant.wallets.addEVMAuthenticator(new SafePalAuth());
     ant.wallets.addEVMAuthenticator(new BraveAuth());
+    ant.wallets.addEVMAuthenticator(new RabbyAuth());
 
     // autologin --
     ant.stores.account.autoLogin();

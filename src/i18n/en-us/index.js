@@ -580,7 +580,7 @@ export default {
         balance_fiat_tooltip: 'Total includes non-liquid TLOS, such as TLOS staked to resources',
     },
     dapps: {
-        title: 'Telos Native dApps',
+        title: 'Telos Zero Apps',
         placeholder: 'Search dApp',
     },
     error404: {
