@@ -60,8 +60,14 @@ export default defineComponent({
             return e && e.isBraveWallet;
         });
 
+        const supportsRabby = computed(() => {
+            const e = window.ethereum as unknown as { [key:string]: boolean };
+            return e && e.isRabby;
+        });
+
         const showMetamaskButton = computed(() => !isMobile.value || supportsMetamask.value);
         const showSafePalButton = computed(() => !isMobile.value || supportsSafePal.value);
+        const showRabbyButton = computed(() => !isMobile.value || supportsRabby.value);
         const injectedProviderDetected = computed(() => !!window.ethereum);
         const showWalletConnectButton = computed(() => !isMobile.value || !injectedProviderDetected.value || (isMobile.value && isBraveBrowser.value)); // temp solution until Brave support is added https://github.com/telosnetwork/telos-wallet/issues/501
         const showBraveButton = isBraveBrowser.value && !isMobile.value;
@@ -90,6 +96,13 @@ export default defineComponent({
         };
         const setWalletConnectEVM = async () => {
             setEVMAuthenticator('WalletConnect', CURRENT_CONTEXT);
+        };
+        const setRabbyEVM = async () => {
+            setEVMAuthenticator('Rabby', CURRENT_CONTEXT);
+        };
+
+        const redirectToRabbyDownload = () => {
+            window.open('https://rabby.io/', '_blank');
         };
 
         const setEVMAuthenticator = async(name: string, label: string) => {
@@ -160,18 +173,22 @@ export default defineComponent({
             supportsMetamask,
             supportsBrave,
             supportsSafePal,
+            supportsRabby,
             showMetamaskButton,
             showBraveButton,
             showSafePalButton,
+            showRabbyButton,
             showWalletConnectButton,
             setMetamaskEVM,
             setBraveEVM,
             setSafePalEVM,
+            setRabbyEVM,
             setWalletConnectEVM,
             notifyNoProvider,
             notifyEnableBrave,
             redirectToMetamaskDownload,
             redirectToSafepalDownload,
+            redirectToRabbyDownload,
             showEVMButtons,
             showZeroButtons,
             ualAuthenticators,
@@ -193,6 +210,27 @@ export default defineComponent({
 <div class="c-login-buttons">
 
     <template v-if="showEVMButtons">
+        <!-- Rabby Authenticator button -->
+        <div
+            v-if="showRabbyButton"
+            class="c-login-buttons__option"
+            @click="supportsRabby ? setRabbyEVM() : redirectToRabbyDownload()"
+        >
+            <template v-if="isLoading('Rabby.login')">
+                <div class="c-login-buttons__loading"><QSpinnerFacebook /></div>
+            </template>
+            <template v-else>
+                <img
+                    :src="require('src/assets/evm/rabby.png')"
+                    class="c-login-buttons__icon c-login-buttons__icon--rabby"
+                    height="24"
+                    width="24"
+                    aria-hidden="true"
+                >
+                {{ supportsRabby ? 'Rabby' : 'Install Rabby' }}
+            </template>
+        </div>
+
         <!-- Brave Authenticator button -->
         <div
             v-if="showBraveButton"
