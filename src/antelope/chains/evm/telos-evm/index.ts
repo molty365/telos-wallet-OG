@@ -6,7 +6,7 @@ import { TokenClass, TokenSourceInfo } from 'src/antelope/types';
 import { useUserStore } from 'src/antelope';
 import { getFiatPriceFromIndexer } from 'src/api/price';
 
-const LOGO = 'https://raw.githubusercontent.com/telosnetwork/token-list/main/logos/telos.png';
+const LOGO = '/branding/telos.png';
 const CHAIN_ID = '40';
 export const NETWORK = 'telos-evm';
 const DISPLAY = 'Telos EVM';
@@ -28,7 +28,7 @@ const S_TOKEN = new TokenClass({
     network: NETWORK,
     decimals: 18,
     address: '0xB4B01216a5Bc8F1C8A33CD990A1239030E60C905',
-    logo: 'https://raw.githubusercontent.com/telosnetwork/token-list/main/logos/stlos.png',
+    logo: '/branding/stlos.png',
     isNative: false,
     isSystem: false,
 } as TokenSourceInfo);
@@ -39,7 +39,7 @@ const W_TOKEN = new TokenClass({
     network: NETWORK,
     decimals: 18,
     address: '0xD102cE6A4dB07D247fcc28F366A623Df0938CA9E',
-    logo: 'https://raw.githubusercontent.com/telosnetwork/token-list/main/logos/wtlos.png',
+    logo: '/branding/wtlos.png',
     isNative: false,
     isSystem: false,
 } as TokenSourceInfo);
@@ -50,6 +50,13 @@ const RPC_ENDPOINT = {
     port: 443,
     path: '/',
 };
+
+// Fallback RPC endpoints for redundancy
+const FALLBACK_RPC_ENDPOINTS = [
+    { protocol: 'https', host: 'mainnet.telos.net', port: 443, path: '/evm' },
+    { protocol: 'https', host: 'telos.drpc.org', port: 443, path: '/' },
+    { protocol: 'https', host: 'rpc1.us.telos.net', port: 443, path: '/evm' },
+];
 const ESCROW_CONTRACT_ADDRESS = '0x95F5713A1422Aa3FBD3DCB8D553945C128ee3855';
 const API_ENDPOINT = 'https://api.telos.net/v1';
 const WEI_PRECISION = 18;
@@ -57,7 +64,8 @@ const EXPLORER_URL = 'https://teloscan.io';
 const ECOSYSTEM_URL = 'https://www.telos.net/ecosystem';
 const BRIDGE_URL = 'https://bridge.telos.net/bridge';
 const NETWORK_EVM_ENDPOINT = 'https://mainnet.telos.net';
-const INDEXER_ENDPOINT = 'https://api.teloscan.io';
+// Blockscout API (replaces legacy api.teloscan.io)
+const INDEXER_ENDPOINT = 'https://teloscan.io';
 const CONTRACTS_BUCKET = 'https://verified-evm-contracts.s3.amazonaws.com';
 
 declare const fathom: { trackEvent: (eventName: string) => void };
@@ -81,6 +89,10 @@ export default class TelosEVMTestnet extends EVMChainSettings {
 
     getRPCEndpoint(): RpcEndpoint {
         return RPC_ENDPOINT;
+    }
+
+    getFallbackRPCEndpoints(): RpcEndpoint[] {
+        return FALLBACK_RPC_ENDPOINTS;
     }
 
     getApiEndpoint(): string {
