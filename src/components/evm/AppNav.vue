@@ -25,18 +25,7 @@ export default defineComponent({
         notifyOnSuccessfulLogin: false,
     }),
     computed: {
-        isLoadingApy() {
-            return this.prettyPrintApy === '';
-        },
-        prettyPrintApy() {
-            const apy = chainStore.currentEvmChain?.apy;
-            if (apy && apy !== '') {
-                return apy + '%';
-            } else {
-                // Fallback APY if API doesn't return a value
-                return '~5%';
-            }
-        },
+
         showMenuIcon() {
             return this.$q.screen.lt.md && !this.showBackButton;
         },
@@ -311,14 +300,6 @@ export default defineComponent({
                     aria-hidden="true"
                 >
                 {{ $t('nav.staking') }}
-                <span class="c-app-nav__apy-box">  {{ $t('evm_stake.apy_card_label') }}
-                    <q-spinner
-                        v-if="isLoadingApy"
-                        color="white"
-                        class="c-app-nav__apy-spinner"
-                    />
-                    <b> {{ prettyPrintApy }}</b>
-                </span>
             </li>
 
             <li
@@ -610,19 +591,6 @@ export default defineComponent({
         }
     }
 
-    &__apy-box {
-        @include text--small;
-        background-color: rgba(255, 255, 255, 0.1);
-        color: $white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        display: inline-block;
-    }
-
-    &__apy-spinner {
-        size: 16px;
-        margin-top: -5px;
-    }
 
     &__icon {
         // svg color overrides - use sidebar-active-color for visibility on gradient bg
