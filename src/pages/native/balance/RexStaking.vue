@@ -1,7 +1,5 @@
 <script>
-import { useChainStore } from 'src/antelope';
 import { mapGetters, mapActions } from 'vuex';
-import axios from 'axios';
 
 export default {
     props: ['showRexStakeDlg', 'haveEVMAccount', 'selectedCoin'],
@@ -12,7 +10,6 @@ export default {
             tokenAmount: 0,
             tokenRexBalance: 0,
             rpc: null,
-            apyString: '',
         };
     },
     computed: {
@@ -105,10 +102,7 @@ export default {
             );
         },
 
-        async setApy() {
-            // Zero inflation era: no staking rewards, APY is 0%
-            this.apyString = '';
-        },
+
 
         async tryStake() {
             try {
@@ -143,7 +137,6 @@ export default {
         },
     },
     async mounted() {
-        await this.setApy();
         this.tokenRexBalance = await this.getRexBalance(this.accountName);
         this.rpc = this.$store.$api.getRpc();
         this.tokenAmount = await this.getTokenAmount();
