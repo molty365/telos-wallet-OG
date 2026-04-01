@@ -35,6 +35,13 @@ const networks = [
         chain: settings['telos-evm'],
     },
     {
+        value: 'telos-privacy',
+        tab: 'zero',
+        chain: settings['telos'],
+        display: 'Telos Privacy',
+        redirectUrl: TELOS_PRIVACY_URL,
+    },
+    {
         value: 'telos',
         tab: 'zero',
         chain: settings['telos'],
@@ -48,13 +55,6 @@ const networks = [
         value: 'telos-testnet',
         tab: 'zero',
         chain: settings['telos-testnet'],
-    },
-    {
-        value: 'telos-privacy',
-        tab: 'zero',
-        chain: settings['telos'],
-        display: 'Telos Privacy',
-        redirectUrl: TELOS_PRIVACY_URL,
     },
 ] as Network[];
 
